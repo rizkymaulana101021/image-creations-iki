@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ImageCreations Iki - Image Toolkit & PDF Converter</title>
+  <meta name="description" content="Aplikasi web client-side serbaguna: Resize, Crop (Cut), Upscale, dan Convert Gambar JPG/PNG ke PDF secara aman langsung di browser." />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Cropper.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Glow Background Accent -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="relative z-10 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i data-lucide="layers" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+            ImageCreations <span class="text-indigo-400">Iki</span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">Resize • Cut/Crop • Upscaler • Convert to PDF</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          100% Client-Side & Privat
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="relative z-10 border-b border-slate-800/80 bg-slate-900/30">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="flex space-x-2 py-3 overflow-x-auto no-scrollbar">
+        <button data-tab="tab-resize" class="nav-tab-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-500/30">
+          <i data-lucide="scaling" class="w-4 h-4"></i>
+          <span>Resize Foto</span>
+        </button>
+        <button data-tab="tab-crop" class="nav-tab-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="crop" class="w-4 h-4"></i>
+          <span>Cut / Potong</span>
+        </button>
+        <button data-tab="tab-upscale" class="nav-tab-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>Upscaler</span>
+        </button>
+        <button data-tab="tab-pdf" class="nav-tab-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>JPG/PNG ke PDF</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="relative z-10 flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
+
+    <!-- ==================== TAB 1: RESIZE ==================== -->
+    <div id="tab-resize" class="tab-content space-y-6">
+      <!-- Empty State / Dropzone -->
+      <div id="resize-empty-state">
+        <div id="resize-dropzone" class="dropzone border-2 border-dashed border-slate-700 hover:border-indigo-500/70 rounded-2xl p-10 text-center cursor-pointer transition-all bg-slate-900/40">
+          <input type="file" id="resize-file-input" class="hidden" accept="image/png, image/jpeg, image/webp" />
+          <div class="max-w-md mx-auto space-y-4">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <i data-lucide="image-plus" class="w-8 h-8"></i>
+            </div>
+            <div>
+              <p class="text-base font-semibold text-slate-200">Seret & lepas foto di sini, atau <span class="text-indigo-400 underline">pilih file</span></p>
+              <p class="text-xs text-slate-400 mt-1">Mendukung format JPG, PNG, dan WebP</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Config & Preview Section (Hidden initially) -->
+      <div id="resize-config-section" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Control Settings -->
+        <div class="lg:col-span-5 glass-card rounded-2xl p-6 space-y-6">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div>
+              <h2 class="font-semibold text-slate-200">Pengaturan Resize</h2>
+              <p id="resize-orig-name" class="text-xs text-slate-400 truncate max-w-[200px]"></p>
+            </div>
+            <button id="resize-reset-btn" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Ganti Foto
+            </button>
+          </div>
+
+          <!-- Quick Scale Percentages -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-2">Skala Cepat</label>
+            <div class="grid grid-cols-4 gap-2">
+              <button data-pct="0.25" class="resize-pct-btn py-2 px-3 bg-slate-800 hover:bg-indigo-600/30 text-xs font-semibold rounded-lg border border-slate-700 transition">25%</button>
+              <button data-pct="0.5" class="resize-pct-btn py-2 px-3 bg-slate-800 hover:bg-indigo-600/30 text-xs font-semibold rounded-lg border border-slate-700 transition">50%</button>
+              <button data-pct="0.75" class="resize-pct-btn py-2 px-3 bg-slate-800 hover:bg-indigo-600/30 text-xs font-semibold rounded-lg border border-slate-700 transition">75%</button>
+              <button data-pct="1.5" class="resize-pct-btn py-2 px-3 bg-slate-800 hover:bg-indigo-600/30 text-xs font-semibold rounded-lg border border-slate-700 transition">150%</button>
+            </div>
+          </div>
+
+          <!-- Dimension Inputs -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-medium text-slate-300">Dimensi Kustom (px)</label>
+              <label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+                <input type="checkbox" id="resize-lock-aspect" checked class="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-800">
+                <span>Kunci Rasio Asli</span>
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <span class="text-[11px] text-slate-400 block mb-1">Lebar (Width)</span>
+                <input type="number" id="resize-width" min="1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              </div>
+              <div>
+                <span class="text-[11px] text-slate-400 block mb-1">Tinggi (Height)</span>
+                <input type="number" id="resize-height" min="1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Social Media Presets -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">Preset Media Sosial</label>
+            <select id="resize-preset-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+              <option value="">-- Pilih Ukuran Populer --</option>
+              <option value="1080x1080">Instagram Feed Square (1080 x 1080)</option>
+              <option value="1080x1350">Instagram Feed Portrait (1080 x 1350)</option>
+              <option value="1080x1920">Instagram Story / TikTok (1080 x 1920)</option>
+              <option value="1280x720">YouTube Thumbnail (1280 x 720)</option>
+              <option value="1500x500">Twitter Header (1500 x 500)</option>
+            </select>
+          </div>
+
+          <!-- Format & Quality -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Format Hasil</label>
+              <select id="resize-format" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                <option value="image/png">PNG (Lossless)</option>
+                <option value="image/jpeg">JPEG (Kecil)</option>
+                <option value="image/webp">WebP (Modern)</option>
+              </select>
+            </div>
+            <div id="resize-quality-container">
+              <div class="flex justify-between items-center mb-1.5">
+                <label class="text-xs font-medium text-slate-300">Kualitas</label>
+                <span id="resize-quality-val" class="text-xs text-indigo-400 font-bold">90%</span>
+              </div>
+              <input type="range" id="resize-quality" min="10" max="100" value="90" class="w-full accent-indigo-500">
+            </div>
+          </div>
+
+          <!-- Action Button -->
+          <button id="resize-process-btn" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition">
+            <i data-lucide="download" class="w-5 h-5"></i>
+            <span>Unduh Hasil Resize</span>
+          </button>
+        </div>
+
+        <!-- Preview Area -->
+        <div class="lg:col-span-7 glass-card rounded-2xl p-6 flex flex-col items-center justify-between">
+          <div class="w-full flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+            <div class="text-xs text-slate-400">
+              Asli: <span id="resize-orig-dim" class="text-slate-200 font-medium"></span> (<span id="resize-orig-size"></span>)
+            </div>
+            <div class="text-xs text-indigo-400">
+              Baru: <span id="resize-new-dim" class="font-medium"></span> (<span id="resize-new-size"></span>)
+            </div>
+          </div>
+
+          <div class="relative w-full flex-grow flex items-center justify-center bg-slate-950/60 rounded-xl overflow-hidden p-4 border border-slate-800 min-h-[350px]">
+            <img id="resize-preview-img" src="" alt="Preview" class="max-h-[380px] max-w-full object-contain rounded-lg shadow-2xl" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: CROP / CUT ==================== -->
+    <div id="tab-crop" class="tab-content hidden space-y-6">
+      <!-- Empty State -->
+      <div id="crop-empty-state">
+        <div id="crop-dropzone" class="dropzone border-2 border-dashed border-slate-700 hover:border-indigo-500/70 rounded-2xl p-10 text-center cursor-pointer transition-all bg-slate-900/40">
+          <input type="file" id="crop-file-input" class="hidden" accept="image/png, image/jpeg, image/webp" />
+          <div class="max-w-md mx-auto space-y-4">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <i data-lucide="crop" class="w-8 h-8"></i>
+            </div>
+            <div>
+              <p class="text-base font-semibold text-slate-200">Seret foto untuk dipotong (Crop / Cut)</p>
+              <p class="text-xs text-slate-400 mt-1">Pilih rasio kustom, putar, atau cerminkan foto</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor Section (Hidden initially) -->
+      <div id="crop-editor-section" class="hidden space-y-6">
+        <!-- Control Bar -->
+        <div class="glass-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+          <!-- Aspect Ratios -->
+          <div class="flex items-center gap-1.5 overflow-x-auto">
+            <span class="text-xs text-slate-400 mr-1 hidden sm:inline">Rasio:</span>
+            <button data-ratio="free" class="crop-ratio-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition">Bebas</button>
+            <button data-ratio="1:1" class="crop-ratio-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">1:1</button>
+            <button data-ratio="4:3" class="crop-ratio-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">4:3</button>
+            <button data-ratio="16:9" class="crop-ratio-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">16:9</button>
+            <button data-ratio="9:16" class="crop-ratio-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">9:16</button>
+          </div>
+
+          <!-- Transform Controls -->
+          <div class="flex items-center gap-2">
+            <button id="crop-rotate-left" title="Putar Kiri -90°" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            </button>
+            <button id="crop-rotate-right" title="Putar Kanan +90°" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition">
+              <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+            </button>
+            <button id="crop-flip-h" title="Flip Horizontal" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition">
+              <i data-lucide="flip-horizontal" class="w-4 h-4"></i>
+            </button>
+            <button id="crop-flip-v" title="Flip Vertical" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition">
+              <i data-lucide="flip-vertical" class="w-4 h-4"></i>
+            </button>
+            <button id="crop-reset-all" title="Reset Ukuran" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Dimension & Format -->
+          <div class="flex items-center gap-3">
+            <span id="crop-dimension-badge" class="px-3 py-1 bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 text-xs font-mono rounded-lg">
+              0 x 0 px
+            </span>
+            <select id="crop-format" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200">
+              <option value="image/png">PNG</option>
+              <option value="image/jpeg">JPEG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Cropper Workspace -->
+        <div class="glass-card rounded-2xl p-4 flex items-center justify-center min-h-[450px] max-h-[600px] overflow-hidden bg-slate-950/80">
+          <img id="crop-target-image" src="" alt="Crop Source" class="max-w-full max-h-[550px]" />
+        </div>
+
+        <!-- Action Footer -->
+        <div class="flex justify-between items-center">
+          <button id="crop-cancel-btn" class="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 text-sm font-medium transition">
+            Batal & Ganti Gambar
+          </button>
+          <button id="crop-download-btn" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition">
+            <i data-lucide="download" class="w-5 h-5"></i>
+            <span>Unduh Hasil Potong</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 3: UPSCALER ==================== -->
+    <div id="tab-upscale" class="tab-content hidden space-y-6">
+      <!-- Empty State -->
+      <div id="upscale-empty-state">
+        <div id="upscale-dropzone" class="dropzone border-2 border-dashed border-slate-700 hover:border-indigo-500/70 rounded-2xl p-10 text-center cursor-pointer transition-all bg-slate-900/40">
+          <input type="file" id="upscale-file-input" class="hidden" accept="image/png, image/jpeg, image/webp" />
+          <div class="max-w-md mx-auto space-y-4">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <i data-lucide="sparkles" class="w-8 h-8"></i>
+            </div>
+            <div>
+              <p class="text-base font-semibold text-slate-200">Tingkatkan Resolusi Foto (Upscaler)</p>
+              <p class="text-xs text-slate-400 mt-1">Perbesar 2x hingga 4x dengan algoritma Restorasi & Penajaman Detail</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview & Compare Section (Hidden initially) -->
+      <div id="upscale-preview-section" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Upscale Controls -->
+        <div class="lg:col-span-4 glass-card rounded-2xl p-6 space-y-6">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div>
+              <h2 class="font-semibold text-slate-200">Kontrol Upscale</h2>
+              <p class="text-xs text-slate-400">Resolusi Super & Penajaman</p>
+            </div>
+            <button id="upscale-reset-btn" class="text-xs text-rose-400 hover:text-rose-300">Ganti Foto</button>
+          </div>
+
+          <!-- Scale Factor Buttons -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-2">Faktor Perbesaran</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button id="upscale-2x-btn" class="py-2.5 rounded-xl font-bold text-sm bg-indigo-600 text-white transition">2x Resolusi</button>
+              <button id="upscale-4x-btn" class="py-2.5 rounded-xl font-bold text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition">4x Resolusi</button>
+            </div>
+          </div>
+
+          <!-- Sharpening & Denoise -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Tingkat Penajaman (Unsharp Mask)</label>
+              <select id="upscale-sharpen-level" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                <option value="0.4">Lembut (Subtle)</option>
+                <option value="0.8" selected>Optimal (Normal - Disarankan)</option>
+                <option value="1.2">Sangat Tajam (High Clarity)</option>
+                <option value="0">Tanpa Penajaman (Bicubic murni)</option>
+              </select>
+            </div>
+
+            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input type="checkbox" id="upscale-denoise" checked class="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-800" />
+              <span>Reduksi Noise & Artefak JPEG</span>
+            </label>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="space-y-2 pt-2">
+            <button id="upscale-process-btn" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition">
+              <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i>
+              <span>Terapkan Ulang</span>
+            </button>
+
+            <button id="upscale-download-btn" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition">
+              <i data-lucide="download" class="w-5 h-5"></i>
+              <span>Unduh Foto HD</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Comparison Display -->
+        <div class="lg:col-span-8 glass-card rounded-2xl p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+            <div class="text-xs text-slate-400">
+              Sebelum: <span id="upscale-orig-dim" class="text-slate-200 font-medium"></span> (<span id="upscale-orig-size"></span>)
+            </div>
+            <div class="text-xs text-indigo-400">
+              Hasil: <span id="upscale-res-dim" class="font-medium"></span> (<span id="upscale-res-size"></span>)
+            </div>
+          </div>
+
+          <!-- Split Slider Container -->
+          <div id="upscale-comparison" class="comparison-container relative w-full h-[400px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
+            <!-- After (Full / Bottom) -->
+            <img id="upscale-after-img" src="" alt="After Upscale" class="absolute w-full h-full object-contain pointer-events-none" />
+            
+            <!-- Before (Clipped on top) -->
+            <div id="upscale-comparison-before" class="comparison-before">
+              <img id="upscale-before-img" src="" alt="Before Upscale" class="absolute w-full h-full object-contain pointer-events-none max-w-none" />
+            </div>
+
+            <!-- Draggable divider handle -->
+            <div id="upscale-handle" class="comparison-handle">
+              <i data-lucide="chevrons-left-right" class="w-4 h-4 text-white"></i>
+            </div>
+
+            <!-- Badges -->
+            <span class="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur rounded text-[11px] font-semibold text-slate-300 pointer-events-none">Sebelum</span>
+            <span class="absolute top-3 right-3 px-2 py-1 bg-indigo-600/80 backdrop-blur rounded text-[11px] font-semibold text-white pointer-events-none">Sesudah (HD)</span>
+          </div>
+
+          <p class="text-center text-xs text-slate-500 mt-3">💡 Geser tombol di tengah gambar untuk melihat perbandingan ketajaman sebelum dan sesudah.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: JPG/PNG KE PDF ==================== -->
+    <div id="tab-pdf" class="tab-content hidden space-y-6">
+      <!-- Empty State -->
+      <div id="pdf-empty-state">
+        <div id="pdf-dropzone" class="dropzone border-2 border-dashed border-slate-700 hover:border-indigo-500/70 rounded-2xl p-10 text-center cursor-pointer transition-all bg-slate-900/40">
+          <input type="file" id="pdf-file-input" class="hidden" multiple accept="image/png, image/jpeg, image/webp" />
+          <div class="max-w-md mx-auto space-y-4">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <i data-lucide="files" class="w-8 h-8"></i>
+            </div>
+            <div>
+              <p class="text-base font-semibold text-slate-200">Seret beberapa gambar untuk digabung ke PDF</p>
+              <p class="text-xs text-slate-400 mt-1">Bisa pilih banyak foto sekaligus (JPG, PNG, WebP)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF Editor Section (Hidden initially) -->
+      <div id="pdf-editor-section" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Settings Panel -->
+        <div class="lg:col-span-4 glass-card rounded-2xl p-6 space-y-6">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div>
+              <h2 class="font-semibold text-slate-200">Pengaturan PDF</h2>
+              <p class="text-xs text-slate-400">Atur tata letak & ukuran dokumen</p>
+            </div>
+            <span id="pdf-count-badge" class="px-2.5 py-1 bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 text-xs font-semibold rounded-lg"></span>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Nama File PDF</label>
+              <input type="text" id="pdf-filename" value="dokumen_gambar" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Ukuran Kertas</label>
+              <select id="pdf-page-size" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                <option value="a4" selected>A4 (Standar)</option>
+                <option value="letter">US Letter</option>
+                <option value="fit">Sesuai Ukuran Gambar (Fit Image)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Orientasi Halaman</label>
+              <select id="pdf-orientation" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                <option value="auto" selected>Otomatis (Sesuaikan Gambar)</option>
+                <option value="p">Portrait (Tegak)</option>
+                <option value="l">Landscape (Memanjang)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Margin / Tepi Halaman</label>
+              <select id="pdf-margin" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                <option value="0">Tanpa Margin (Full Bleed)</option>
+                <option value="5">Tipis (5 mm)</option>
+                <option value="10" selected>Normal (10 mm)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="space-y-2 pt-2">
+            <button id="pdf-generate-btn" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition">
+              <i data-lucide="file-check-2" class="w-5 h-5"></i>
+              <span>Konversi & Unduh PDF</span>
+            </button>
+            <button id="pdf-clear-all-btn" class="w-full py-2 text-xs text-rose-400 hover:text-rose-300">
+              Hapus Semua Foto
+            </button>
+          </div>
+        </div>
+
+        <!-- Image Queue List -->
+        <div class="lg:col-span-8 glass-card rounded-2xl p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+            <h3 class="text-sm font-semibold text-slate-200">Urutan Halaman PDF</h3>
+            <label class="cursor-pointer text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Foto Lagi
+              <input type="file" id="pdf-add-more-input" class="hidden" multiple accept="image/png, image/jpeg, image/webp" />
+            </label>
+          </div>
+
+          <!-- Scrollable list of items -->
+          <div id="pdf-items-container" class="space-y-3 max-h-[480px] overflow-y-auto pr-2">
+            <!-- Dynamic items rendered by pdf.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-slate-800/80 bg-slate-900/40 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p>Dibuat untuk repositori <strong class="text-slate-300">image-creations-iki</strong>. Siap dideploy di GitHub Pages.</p>
+      <div class="flex items-center gap-4 text-slate-400">
+        <span>⚡ Cepat & Ringan</span>
+        <span>🛡️ Privasi Terjamin</span>
+        <span>🌐 100% Client-Side</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- Main JavaScript Bundle (No build step required, works on file:// & GitHub Pages) -->
+  <script src="js/bundle.js"></script>
+</body>
+</html>
